@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.11] - 2026-02-23
+
+### Added
+- aarch64 (ARM64) architecture support for Raspberry Pi 4/5, ODROID, etc.
+- `build.yaml` for multi-architecture builds via HA builder
+- Dockerfile now uses `BUILD_FROM` arg pattern (consistent with other add-ons)
+
 ## [0.1.10] - 2026-01-15
 
 ### Fixed

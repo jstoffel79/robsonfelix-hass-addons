@@ -1,11 +1,11 @@
-# Use Playwright image directly (HA's build_from regex doesn't support MCR format)
-FROM mcr.microsoft.com/playwright:v1.57.0-noble
+ARG BUILD_FROM
+FROM ${BUILD_FROM}
 
 # Labels
 LABEL maintainer="Robson Felix"
 LABEL io.hass.version="0.1.0"
 LABEL io.hass.type="addon"
-LABEL io.hass.arch="amd64"
+LABEL io.hass.arch="amd64,aarch64"
 LABEL org.opencontainers.image.title="Playwright Browser for Home Assistant"
 LABEL org.opencontainers.image.description="Headless Chromium with CDP endpoint for browser automation"
 LABEL org.opencontainers.image.source="https://github.com/robsonfelix/robsonfelix-hass-addons"
