@@ -5,8 +5,13 @@ echo "========================================"
 echo "  Playwright Browser Add-on Starting"
 echo "========================================"
 
-# Read configuration
-CDP_PORT=$(jq -r '.cdp_port // 9222' /data/options.json)
+# Read configuration safely
+if [ -f /data/options.json ]; then
+    CDP_PORT=$(jq -r '.cdp_port // 9222' /data/options.json)
+else
+    echo "[WARN] /data/options.json not found, using default port 9222"
+    CDP_PORT=9222
+fi
 INTERNAL_PORT=9223
 
 echo "[INFO] CDP port: ${CDP_PORT}"
@@ -147,17 +152,25 @@ echo "[INFO] CDP endpoint ready at http://playwright-browser:${CDP_PORT}"
 # Give nginx a moment to start
 sleep 2
 
-# Monitor both processes
-while true; do
-    if ! kill -0 $CHROME_PID 2>/dev/null; then
-        echo "[ERROR] Chrome process exited!"
-        kill $NGINX_PID 2>/dev/null || true
-        exit 1
-    fi
-    if ! kill -0 $NGINX_PID 2>/dev/null; then
-        echo "[ERROR] nginx process exited!"
-        kill $CHROME_PID 2>/dev/null || true
-        exit 1
-    fi
-    sleep 5
-done
+# --- PROCESS MANAGEMENT AND GRACEFUL SHUTDOWN ---
+
+# 1. Define a cleanup function to gracefully shut down children
+cleanup() {
+    echo "[INFO] Shutdown signal received. Stopping Chromium and Nginx cleanly..."
+    kill -TERM "$CHROME_PID" 2>/dev/null || true
+    kill -TERM "$NGINX_PID" 2>/dev/null || true
+    wait "$CHROME_PID" "$NGINX_PID" 2>/dev/null || true
+    echo "[INFO] Shutdown complete."
+    exit 0
+}
+
+# 2. Trap SIGTERM (Docker/HA stop) and SIGINT (Ctrl+C) and route them to the cleanup function
+trap cleanup SIGTERM SIGINT
+
+# 3. Use 'wait -n' instead of a while loop. 
+# This pauses the script until EITHER process exits natively.
+wait -n "$CHROME_PID" "$NGINX_PID"
+
+# 4. If we reach this point natively, one of the processes crashed unexpectedly.
+echo "[ERROR] A critical process exited unexpectedly! Tearing down container..."
+cleanup
